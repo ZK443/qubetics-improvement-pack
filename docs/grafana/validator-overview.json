@@ -1,0 +1,43 @@
+{
+  "title": "Validator Overview",
+  "panels": [
+    {
+      "type": "graph",
+      "title": "Missed blocks",
+      "targets": [
+        {
+          "expr": "tendermint_missed_blocks_total"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Peer count",
+      "targets": [
+        {
+          "expr": "p2p_peers"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Mempool size",
+      "targets": [
+        {
+          "expr": "mempool_txs"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Block time (s)",
+      "targets": [
+        {
+          "expr": "block_time_seconds"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 30,
+  "version": 1
+}

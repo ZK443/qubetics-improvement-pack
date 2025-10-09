@@ -1,0 +1,12 @@
+[Unit]
+Description=Qubetics Node
+After=network-online.target
+
+[Service]
+User=qubed
+ExecStart=/usr/local/bin/qubed start --home /var/lib/qubed
+Restart=on-failure
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

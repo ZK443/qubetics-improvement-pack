@@ -1,0 +1,13 @@
+---
+- name: Ensure user exists
+  user: name=qubed system=yes shell=/sbin/nologin
+- name: Create data dir
+  file: path=/var/lib/qubed state=directory owner=qubed group=qubed mode=0750
+- name: Install binary
+  copy: src=qubed dest=/usr/local/bin/qubed mode=0755
+- name: Install systemd unit
+  copy: src=qubed.service dest=/etc/systemd/system/qubed.service
+- name: Reload systemd
+  command: systemctl daemon-reload
+- name: Enable & start
+  systemd: name=qubed state=started enabled=yes

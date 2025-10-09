@@ -1,0 +1,43 @@
+{
+  "title": "Bridge Overview",
+  "panels": [
+    {
+      "type": "graph",
+      "title": "Messages per minute",
+      "targets": [
+        {
+          "expr": "bridge_msgs_total"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Proof verification latency (s)",
+      "targets": [
+        {
+          "expr": "bridge_verify_latency_seconds"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Execute errors",
+      "targets": [
+        {
+          "expr": "bridge_execute_errors_total"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Circuit breaker state",
+      "targets": [
+        {
+          "expr": "bridge_circuit_open"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 30,
+  "version": 1
+}
