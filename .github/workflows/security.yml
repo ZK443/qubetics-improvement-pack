@@ -1,0 +1,25 @@
+name: Security
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch: {}
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install gosec
+        run: go install github.com/securego/gosec/v2/cmd/gosec@latest
+      - name: Run gosec
+        run: gosec ./... || true
+      - name: Generate SBOM
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          syft packages dir:. -o spdx-json > sbom.spdx.json
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.spdx.json
+
+Add .github/workflows/security.yml (security scan + SBOM)
