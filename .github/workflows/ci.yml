@@ -2,35 +2,34 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ main ]
+    branches: [ "main" ]
 
 jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Validate Markdown
+      - uses: actions/checkout@v4
+      - name: Markdown lint
         uses: avto-dev/markdown-lint@v1
         with:
           args: '**/*.md'
-
-      - name: Validate YAML
+      - name: YAML lint (workflows only)
         uses: ibiqlik/action-yamllint@v3
         with:
           file_or_dir: .github/workflows
 
-  security:
+  sbom:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Run dependency scan
+      - uses: actions/checkout@v4
+      - name: Syft SBOM
         run: |
-          sudo apt-get install -y curl
           curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
           syft dir:. -o spdx-json > sbom.spdx.json
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.spdx.json
