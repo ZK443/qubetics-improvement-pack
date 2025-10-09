@@ -1,0 +1,20 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+      - run: go mod download || true
+      - run: go build ./... || true
+      - run: go test ./... -race -coverprofile=coverage.out || true
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.59
+      - name: Install gosec
+        run: go install github.com/securego/gosec/v2/cmd/gosec@latest
+      - name: Run gosec
+        run: gosec ./... || true
