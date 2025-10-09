@@ -1,6 +1,7 @@
 # Qubetics – Community Technical Improvement Pack
 
 This repository contains community-proposed improvements for Qubetics:
+
 - RFCs (architecture, security, bridge, risk layer, privacy)
 - Production-grade process (CI, lint, security scanning)
 - On-chain vesting module skeleton (`x/tics`) with invariants
