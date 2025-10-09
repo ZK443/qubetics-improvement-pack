@@ -16,5 +16,4 @@ jobs:
       - uses: actions/checkout@v4
       - uses: gitleaks/gitleaks-action@v2
         with:
-          # сканируем рабочую директорию репо
           args: detect --verbose --redact
