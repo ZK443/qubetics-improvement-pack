@@ -1,7 +1,11 @@
 name: CodeQL
+
 on:
-  push: {branches: [main]}
-  pull_request: {branches: [main]}
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
 jobs:
   analyze:
     runs-on: ubuntu-latest
@@ -12,9 +16,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'go' ]
+        language: [ go ]
     steps:
       - uses: actions/checkout@v4
       - uses: github/codeql-action/init@v3
-        with: { languages: ${{ matrix.language }} }
+        with:
+          languages: ${{ matrix.language }}
       - uses: github/codeql-action/analyze@v3
