@@ -12,11 +12,13 @@ import (
 
 	bridgemodule "github.com/ZK443/qubetics-improvement-pack/chain/x/bridge"
 	bridgekeeper "github.com/ZK443/qubetics-improvement-pack/chain/x/bridge/keeper"
+	bridgetypes "github.com/ZK443/qubetics-improvement-pack/chain/x/bridge/types"
 )
 
 type QubeticsApp struct {
 	*baseapp.BaseApp
 	BridgeKeeper bridgekeeper.Keeper
+	keys         map[string]*storetypes.KVStoreKey
 }
 
 func NewQubeticsApp() *QubeticsApp {
@@ -27,17 +29,18 @@ func NewQubeticsApp() *QubeticsApp {
 
 	// Инициализация хранилища для bridge-модуля
 	bridgeKey := storetypes.NewKVStoreKey(bridgetypes.ModuleName)
+	kvKeys := map[string]*storetypes.KVStoreKey{
+		bridgetypes.ModuleName: bridgeKey,
+	}
 
-	bApp.MountKVStores(bridgeKey)
+	bApp.MountKVStores(kvKeys)
 	if err := bApp.LoadLatestVersion(); err != nil {
 		panic(err)
 	}
 	
 	app := &QubeticsApp{
-		BaseApp: bApp,
-		keys: map[string]*storetypes.KVStoreKey{
-			bridgetypes.ModuleName: bridgeKey,
-		},
+		BaseApp:      bApp,
+		keys:         kvKeys,
 		BridgeKeeper: bridgekeeper.NewKeeper(bridgeKey, noopBankKeeper{}),
 	}
 
