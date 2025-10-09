@@ -2,11 +2,13 @@ package keeper
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"qubetics/chain/x/bridge/types"
+
+	"github.com/ZK443/qubetics-improvement-pack/chain/x/bridge/types"
+	
 )
 
 type Keeper struct {
-	bank    types.BankKeeper // interface to send coins if needed
+	bank     types.BankKeeper // interface to send coins if needed
 	storeKey sdk.StoreKey
 }
 
