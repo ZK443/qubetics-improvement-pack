@@ -1,4 +1,5 @@
 # RFC-001: Bridge and Security Enhancement for Qubetics Network
+
 **Status:** Draft  
 **Author:** Independent Technical Auditor  
 **Version:** 1.0  
@@ -120,6 +121,7 @@ To align with best practices from **Cosmos**, **Osmosis**, and **Celestia**, Qub
 | **D** | Deploy governance + on-chain monitoring | Production-ready bridge |
 
 ## 8. References
+
 - [Qubetics GitHub Organization](https://github.com/Qubetics)  
 - [Qubetics Improvement Pack](https://github.com/ZK443/qubetics-improvement-pack)  
 - [Cosmos SDK Docs](https://docs.cosmos.network)  
