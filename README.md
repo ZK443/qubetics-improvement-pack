@@ -9,6 +9,7 @@ This repository contains community-proposed improvements for Qubetics:
 > Goal: raise reliability, security, privacy, and cross-chain bridge quality to industry standards without disrupting mainnet – phased, governance-driven upgrades.
 
 ## Added in pack v2
+
 - `x/bridge` skeleton (interfaces, events, keeper)
 - Threat model (STRIDE) template
 - Grafana dashboards (bridge/validator)
