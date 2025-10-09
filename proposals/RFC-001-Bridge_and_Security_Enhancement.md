@@ -46,16 +46,19 @@ All bridges communicate through the **`x/bridge` module** in Qubetics.
 
 1. **Send:**  
    - User submits a transfer or cross-chain call.  
-   - Message gets hashed (`msg.ID`) and stored on Qubetics.  
+   - Message gets hashed (`msg.ID`) and stored on Qubetics.
+     
 2. **Verify:**  
    - A proof (zk/light/SPV) is generated on source chain.  
    - Relayers submit proof to Qubetics verifier contracts.  
-   - Proof validation is modular: `lightClient.Verify()` or `zkClient.Verify()`.  
+   - Proof validation is modular: `lightClient.Verify()` or `zkClient.Verify()`.
+     
 3. **Execute:**  
    - Once verified, message is executed (token mint, contract call, or unlock).  
    - Replay protection via `msg.Nonce` and event logging.  
 
 **Invariants:**
+
 - No `Execute` without a successful `Verify`.  
 - One-time execution per `(ID, Nonce)`.  
 - Multi-client verification: at least 2 proofs for high-value transactions.  
@@ -69,6 +72,7 @@ A **Risk Layer** is introduced to protect users and investors:
 - **Timelock upgrades** (prevent instant governance attacks).  
 
 **Audit hooks:**  
+
 Each bridge event emits standardized logs (`EventSend`, `EventVerify`, `EventExecute`) for external monitoring.
 
 ### 3.4. Compliance and Privacy
