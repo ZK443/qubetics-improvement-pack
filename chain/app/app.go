@@ -1,13 +1,16 @@
 package app
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	"errors"
+
+	cosmolog "cosmossdk.io/log"
+	dbm "github.com/cometbft/cometbft-db"
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/store"
-	"github.com/cosmos/cosmos-sdk/store/prefix"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/bank"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	bridgemodule "github.com/ZK443/qubetics-improvement-pack/chain/x/bridge"
 	bridgekeeper "github.com/ZK443/qubetics-improvement-pack/chain/x/bridge/keeper"
 )
 
@@ -17,18 +20,31 @@ type QubeticsApp struct {
 }
 
 func NewQubeticsApp() *QubeticsApp {
-	app := &QubeticsApp{
-		BaseApp: baseapp.NewBaseApp("qubetics", nil, store.NewCommitMultiStore(nil)),
-	}
+	logger := cosmolog.NewNopLogger()
+	db := dbm.NewMemDB()
+
+	bApp := baseapp.NewBaseApp("qubetics", logger, db, noopTxDecoder)
 
 	// Инициализация хранилища для bridge-модуля
-	keyBridge := sdk.NewKVStoreKey("bridge")
-	ctx := sdk.NewContext(store.NewCommitMultiStore(nil), abci.Header{}, false, nil)
+	bridgeKey := storetypes.NewKVStoreKey(bridgetypes.ModuleName)
 
-	app.BridgeKeeper = bridgekeeper.Keeper{
-		StoreService: prefix.NewStore(ctx.KVStore(keyBridge), []byte("bridge/")),
+	bApp.MountKVStores(bridgeKey)
+	if err := bApp.LoadLatestVersion(); err != nil {
+		panic(err)
+	}
+	
+	app := &QubeticsApp{
+		BaseApp: bApp,
+		keys: map[string]*storetypes.KVStoreKey{
+			bridgetypes.ModuleName: bridgeKey,
+		},
+		BridgeKeeper: bridgekeeper.NewKeeper(bridgeKey, noopBankKeeper{}),
 	}
 
+	app.SetInitChainer(app.InitChainer)
+	app.SetBeginBlocker(app.BeginBlocker)
+	app.SetEndBlocker(app.EndBlocker)
+	
 	return app
 }
 
@@ -40,7 +56,17 @@ func (app *QubeticsApp) EndBlocker(ctx sdk.Context, _ abci.RequestEndBlock) abci
 	return abci.ResponseEndBlock{}
 }
 
-func (app *QubeticsApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
-	app.BridgeKeeper.InitGenesis(ctx)
+func (app *QubeticsApp) InitChainer(ctx sdk.Context, _ abci.RequestInitChain) abci.ResponseInitChain {
+	bridgemodule.InitGenesis(ctx)
 	return abci.ResponseInitChain{}
+}
+
+func noopTxDecoder(_ []byte) (sdk.Tx, error) {
+	return nil, errors.New("tx decoding not configured for QubeticsApp skeleton")
+}
+
+type noopBankKeeper struct{}
+
+func (noopBankKeeper) SendCoinsFromModuleToAccount(ctx sdk.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins) error {
+	return nil
 }
