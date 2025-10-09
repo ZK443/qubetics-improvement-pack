@@ -6,7 +6,7 @@ The keeper manages message state transitions within the bridge:
 - **HandleMessage()** — receives and routes bridge messages.
 - **Hooks:** rate-limit checks, proof validation, and event emission.
 
-### Message Flow
+## Message Flow
 
 `Send → Verify → Execute`
 Each step emits standardized events:
