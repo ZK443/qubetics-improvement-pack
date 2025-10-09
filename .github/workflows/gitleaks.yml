@@ -1,5 +1,14 @@
-name: gitleaks
-on: [push, pull_request]
+name: Gitleaks
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
 jobs:
   scan:
     runs-on: ubuntu-latest
@@ -7,4 +16,5 @@ jobs:
       - uses: actions/checkout@v4
       - uses: gitleaks/gitleaks-action@v2
         with:
-          args: detect --no-git -v
+          # сканируем рабочую директорию репо
+          args: detect --verbose --redact
