@@ -14,6 +14,7 @@ This is the main application entrypoint for the modular Qubetics chain.
 This app skeleton demonstrates how Cosmos SDK-based modular architecture can be wired together.
 
 Further steps:
+
 - Register message routes.
 - Add CLI and gRPC interfaces.
 - Integrate consensus engine (CometBFT/Tendermint).
