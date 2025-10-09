@@ -1,35 +1,16 @@
-# Qubetics Bridge (skeleton, "right" variant)
+# Bridge Keeper — Overview
 
-**Flow:** `Send → Verify → Execute`
+The keeper manages message state transitions within the bridge:
+- **InitGenesis()** — module bootstrap.
+- **HandleMessage()** — receives and routes bridge messages.
+- **Hooks:** rate-limit checks, proof validation, and event emission.
 
-## Инварианты
+### Message Flow
 
-- **Нет Execute без Verify** (подтверждённого доказ-ва)
-- **Идемпотентность:** повторный Execute для одного `msg.ID` — no-op
-- **Replay protection:** монотонный `Nonce` per-route
-- **Risk-layer:** rate-limits, pause/kill-switch, timelock на апгрейды (далее)
+`Send → Verify → Execute`
+Each step emits standardized events:
+- `bridge_send`
+- `bridge_verify`
+- `bridge_execute`
 
-## Поток
-
-1) **Send** — создаётся заявка (`MsgSend`), пишется `StatusPending`.
-2) **Verify** — хранится валидный `Proof`, статус `StatusVerified`.
-3) **Execute** — проверка статуса, применение эффекта, `StatusExecuted`.
-
-## Клиенты доказательств
-
-- **ETH**: light+Merkle (опц. zk)
-- **SOL**: light+Merkle
-- **BTC**: SPV (headers+tx) / HTLC
-
-## Хранилище (минимум)
-
-- `msg:ID`
-- `st:ID`
-- `pf:ID`
-- `rl:route`
-- `ps:route`
-
-## Метрики/аудит
-
-- События: `bridge_send`, `bridge_verify`, `bridge_execute`
-- Дашборды: `docs/grafana/*`
+The keeper ensures **idempotency**, **proof validation**, and **replay protection**.
