@@ -1,10 +1,11 @@
+---
 name: OSV-Scanner Scheduled Scan
 
-on:
+"on":
   schedule:
-    - cron: "30 12 * * 1"   # понедельник 12:30 UTC
+    - cron: "30 12 * * 1"
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 permissions:
   actions: read
@@ -14,8 +15,3 @@ permissions:
 jobs:
   scan-scheduled:
     uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.2.3
-    # опционально: кастомные аргументы
-    # with:
-    #   scan-args: |-
-    #     --recursive
-    #     ./
