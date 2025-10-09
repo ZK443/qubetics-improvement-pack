@@ -1,18 +1,31 @@
-// SPDX-License-Identifier: MIT
 package keeper
 
-// RateLimitConfig — простая модель лимитов на маршрут.
-type RateLimitConfig struct {
-	WindowSeconds uint32
-	MaxUnits      uint64 // единицы зависят от маршрута (сумма/шт.)
-}
+import (
+    sdk "github.com/cosmos/cosmos-sdk/types"
+    "time"
+)
 
-func (k Keeper) isPaused(route string) bool {
-	// TODO: читать флаг kill-switch из стора
-	return false
-}
+var (
+    DefaultMaxPerAccount = sdk.NewInt(10_000_000_000) // Example: 10 QUBT max per hour
+    DefaultCooldown      = time.Hour
+)
 
-func (k Keeper) rateLimited(route string) (bool, string) {
-	// TODO: проверка окна/квоты (например, per token per day)
-	return false, ""
+func (k Keeper) CheckRateLimit(ctx sdk.Context, account sdk.AccAddress, amount sdk.Int) bool {
+    store := ctx.KVStore(k.storeKey)
+    key := []byte("limit:" + account.String())
+
+    bz := store.Get(key)
+    if bz != nil {
+        lastTime := sdk.BigEndianToUint64(bz)
+        if ctx.BlockTime().Sub(time.Unix(int64(lastTime), 0)) < DefaultCooldown {
+            return false
+        }
+    }
+
+    if amount.GT(DefaultMaxPerAccount) {
+        return false
+    }
+
+    store.Set(key, sdk.Uint64ToBigEndian(uint64(ctx.BlockTime().Unix())))
+    return true
 }
