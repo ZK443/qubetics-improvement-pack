@@ -136,5 +136,4 @@ To align with best practices from **Cosmos**, **Osmosis**, and **Celestia**, Qub
 This RFC defines a secure, modular bridge architecture and governance system to transform Qubetics into a **production-grade, investor-trusted, multi-chain network**.
 The implementation enhances transparency, interoperability, and long-term network resilience without breaking existing compatibility.
 
-
 add RFC-001 Bridge & Security Enhancement proposal
