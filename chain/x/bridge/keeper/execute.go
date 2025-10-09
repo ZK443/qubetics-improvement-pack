@@ -1,16 +1,29 @@
-// SPDX-License-Identifier: MIT
 package keeper
 
-import qtypes "github.com/ZK443/qubetics-improvement-pack/chain/x/bridge/types"
+import (
+    "context"
+    sdk "github.com/cosmos/cosmos-sdk/types"
+    "github.com/ZK443/qubetics-improvement-pack/chain/x/bridge/types"
+)
 
-type Keeper struct{}
+func (k Keeper) Execute(ctx context.Context, msg types.MsgExecute) (*types.MsgExecuteResponse, error) {
+    store := sdk.UnwrapSDKContext(ctx).KVStore(k.storeKey)
+    execKey := []byte(msg.MessageId)
 
-// Execute — идемпотентное применение эффекта сообщения.
-// Инварианты: нет Execute без Verify; повторный Execute — no-op; события на выход.
-func (k Keeper) Execute(msg qtypes.Message) error {
-	// TODO: проверить, что status(msg.ID) == StatusVerified
-	// TODO: если уже Executed — вернуть nil (идемпотентность)
-	// TODO: роутинг по msg.Route (mint/unlock/contract-call)
-	// TODO: mark Executed и emit событие "bridge_execute"
-	return nil
+    if store.Has(execKey) {
+        return nil, types.ErrAlreadyExecuted
+    }
+
+    // TODO: Execute token mint/unlock logic based on message content
+    store.Set(execKey, []byte("executed"))
+
+    sdkCtx := sdk.UnwrapSDKContext(ctx)
+    sdkCtx.EventManager().EmitEvent(
+        sdk.NewEvent("bridge_execute",
+            sdk.NewAttribute("message_id", msg.MessageId),
+            sdk.NewAttribute("executor", msg.Executor),
+        ),
+    )
+
+    return &types.MsgExecuteResponse{Status: "done"}, nil
 }
