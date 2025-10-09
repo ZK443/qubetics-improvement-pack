@@ -13,6 +13,7 @@ The goal is to strengthen interoperability, ensure verifiable cross-chain transf
 ## 2. Current State Analysis
 
 Based on public repositories:
+
 - **Qubetics** maintains several infrastructure-oriented repos (`mainnet-upgrade`, `mainnetnode-script`, `testnet-script`) and the core `qubetics-blockchain` built on **Cosmos SDK**.
 - The **bridge layer** and **security automation** are **not yet public** or incomplete.
 - There is **no visible CI pipeline**, **no CODEOWNERS**, and **limited threat-model documentation**.
@@ -24,12 +25,13 @@ Based on public repositories:
 
 **Multi-chain bridge topology:**
 
-```
+```text
 Ethereum  ⇄  Qubetics  ⇄  Solana
        \            |
         \           ⇄  Bitcoin
          \
           ⇄  Off-chain verifier layer
+
 ```
 
 - **Ethereum Bridge** — uses light client + zk-SNARK proof verification for ERC-20 and ERC-721 transfers.
@@ -42,18 +44,20 @@ All bridges communicate through the **`x/bridge` module** in Qubetics.
 ### 3.2. Bridge Workflow
 
 **Phases:**
-1. **Send:**  
+
+1. **Send:**
    - User submits a transfer or cross-chain call.
-   - Message gets hashed (`msg.ID`) and stored on Qubetics.   
-2. **Verify:**  
-   - A proof (zk/light/SPV) is generated on source chain.  
-   - Relayers submit proof to Qubetics verifier contracts.  
+   - Message gets hashed (`msg.ID`) and stored on Qubetics.
+2. **Verify:**
+   - A proof (zk/light/SPV) is generated on source chain.
+   - Relayers submit proof to Qubetics verifier contracts.
    - Proof validation is modular: `lightClient.Verify()` or `zkClient.Verify()`.
-3. **Execute:**  
+3. **Execute:**
    - Once verified, message is executed (token mint, contract call, or unlock).
    - Replay protection via `msg.Nonce` and event logging.
 
 **Invariants:**
+
 - No `Execute` without a successful `Verify`.
 - One-time execution per `(ID, Nonce)`.
 - Multi-client verification: at least 2 proofs for high-value transactions.
@@ -61,6 +65,7 @@ All bridges communicate through the **`x/bridge` module** in Qubetics.
 ### 3.3. Security and Risk Layer
 
 A **Risk Layer** is introduced to protect users and investors:
+
 - **Rate limits per route** (e.g., max daily transfer per token).
 - **Circuit breakers** (automatic pause when anomalies detected).
 - **Governance veto** (multi-sig or DAO-controlled stop).
