@@ -2,9 +2,9 @@ name: CodeQL
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 permissions:
   actions: read
@@ -17,10 +17,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ go ]
+        language: [go]
     steps:
       - uses: actions/checkout@v4
       - uses: github/codeql-action/init@v3
         with:
-          languages: ${{ matrix.language }}
+          languages: ${{matrix.language}}
       - uses: github/codeql-action/analyze@v3
