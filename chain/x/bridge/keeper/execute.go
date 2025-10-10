@@ -10,37 +10,34 @@ import (
 func (k Keeper) Execute(ctx context.Context, msg types.MsgExecute) (*types.MsgExecuteResponse, error) {
     sdkCtx := sdk.UnwrapSDKContext(ctx)
 
-    // Pause / Rate-limits (если реализованы)
-    if k.IsBridgePaused(sdkCtx) {
-        return nil, types.ErrBridgePaused
+// 1) Глобальная пауза (kill-switch)
+    if k.isPaused() {
+        return qtypes.StatusRejected, "paused"
     }
-    if !k.CheckRateLimit(sdkCtx, msg.Executor, msg.Amount) {
-        return nil, types.ErrRateLimitExceeded
+    // 2) Должен быть verify
+    st := k.getStatusByID(msg.ID)
+    if st != qtypes.StatusVerified {
+        return qtypes.StatusRejected, "not-verified"
     }
-
-    store := sdkCtx.KVStore(k.storeKey)
-    eKey := k.execKey(msg.MessageId)
-    pKey := k.proofKey(msg.ProofId)
-
-    // Проверяем, что Verify был успешен
-    if !store.Has(pKey) {
-        return nil, types.ErrNotVerified
+    // 3) Идемпотентность
+    if k.isExecuted(msg.ID) {
+        return qtypes.StatusExecuted, "replayed"
     }
-
-    // Идемпотентность: атомарная проверка + запись статуса исполнения
-    if store.Has(eKey) {
-        return nil, types.ErrAlreadyExecuted
+    // 4) Rate-limit (на маршрут/токен/аккаунт)
+    if exceeded, why := k.rateLimited(msg); exceeded {
+        return qtypes.StatusRejected, "rate-limit: " + why
     }
-    store.Set(eKey, []byte("executed"))
-
-    // TODO: здесь должен быть реальный mint/unlock/contract-call, зависит от интеграции
-
-    sdkCtx.EventManager().EmitEvent(
-        sdk.NewEvent("bridge_execute",
-            sdk.NewAttribute("message_id", msg.MessageId),
-            sdk.NewAttribute("executor", msg.Executor.String()),
-        ),
-    )
-
-    return &types.MsgExecuteResponse{Status: "done"}, nil
-}
+    // 5) Выполнение экшена по route (пока no-op; прокинем хук позже)
+    switch msg.Route {
+    case qtypes.RouteTokenTransfer:
+        // TODO: mint/unlock
+    case qtypes.RouteContractCall:
+        // TODO: IBC/contract invoke
+    default:
+        return qtypes.StatusRejected, "unsupported-route"
+    }
+    // 6) Отмечаем исполнение и эмитим событие
+    k.markExecuted(msg.ID)
+    k.emitEvent("bridge_execute", map[string]string{"msg_id": msg.ID})
+    return qtypes.StatusExecuted, ""
+ }
