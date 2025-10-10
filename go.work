@@ -1,0 +1,7 @@
+go 1.21
+
+use (
+    ./chain/x/bridge
+    ./chain/app
+    ./scripts/bridgectl
+)
