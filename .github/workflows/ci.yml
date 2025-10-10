@@ -13,6 +13,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+            - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.x"
+
+      - name: Go tests
+        run: |
+          cd chain/x/bridge
+          go mod tidy
+          go test ./... -v
+
+      - name: Run gosec
+        uses: securego/gosec-action@v2
+        with:
+          args: ./...
+        working-directory: chain/x/bridge
+
       - name: Markdown lint
         uses: avto-dev/markdown-lint@v1
         with:
