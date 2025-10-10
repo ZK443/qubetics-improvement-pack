@@ -1,46 +1,41 @@
 package keeper
 
-import (
-    "context"
+import "github.com/ZK443/qubetics-improvement-pack/chain/x/bridge/types"
 
-    sdk "github.com/cosmos/cosmos-sdk/types"
-    "github.com/ZK443/qubetics-improvement-pack/chain/x/bridge/types"
-)
+// Идемпотентное выполнение после успешного Verify.
+// Никаких зависимостей от Cosmos SDK — чистая логика для CI.
+func (k *Keeper) Execute(msg types.MsgExecute) (*types.MsgExecuteResponse, error) {
+	// 1) Kill-switch
+	if k.isPaused() {
+		return &types.MsgExecuteResponse{Status: types.StatusRejected, Reason: "paused"}, nil
+	}
 
-func (k Keeper) Execute(ctx context.Context, msg types.MsgExecute) (*types.MsgExecuteResponse, error) {
-    sdkCtx := sdk.UnwrapSDKContext(ctx)
+	// 2) Должен быть Verify
+	if st := k.getStatusByID(msg.ID); st != types.StatusVerified {
+		return &types.MsgExecuteResponse{Status: types.StatusRejected, Reason: "not-verified"}, nil
+	}
 
-    // Pause / Rate-limits (если реализованы)
-    if k.IsBridgePaused(sdkCtx) {
-        return nil, types.ErrBridgePaused
-    }
-    if !k.CheckRateLimit(sdkCtx, msg.Executor, msg.Amount) {
-        return nil, types.ErrRateLimitExceeded
-    }
+	// 3) Идемпотентность
+	if k.isExecuted(msg.ID) {
+		return &types.MsgExecuteResponse{Status: types.StatusExecuted, Reason: "replayed"}, nil
+	}
 
-    store := sdkCtx.KVStore(k.storeKey)
-    eKey := k.execKey(msg.MessageId)
-    pKey := k.proofKey(msg.ProofId)
+	// 4) Rate-limit
+	if exceeded, why := k.rateLimited(msg); exceeded {
+		return &types.MsgExecuteResponse{Status: types.StatusRejected, Reason: "rate-limit: " + why}, nil
+	}
 
-    // Проверяем, что Verify был успешен
-    if !store.Has(pKey) {
-        return nil, types.ErrNotVerified
-    }
+	// 5) Выполнение по маршруту (пока заглушки)
+	switch msg.Route {
+	case types.RouteTokenTransfer, types.RouteContractCall:
+		// TODO: подключить реальный адаптер (mint/unlock/contract-call)
+	default:
+		return &types.MsgExecuteResponse{Status: types.StatusRejected, Reason: "unsupported-route"}, nil
+	}
 
-    // Идемпотентность: атомарная проверка + запись статуса исполнения
-    if store.Has(eKey) {
-        return nil, types.ErrAlreadyExecuted
-    }
-    store.Set(eKey, []byte("executed"))
+	// 6) Отметить исполнение + событие
+	k.markExecuted(msg.ID)
+	k.emitEvent("bridge_execute", map[string]string{"msg_id": msg.ID})
 
-    // TODO: здесь должен быть реальный mint/unlock/contract-call, зависит от интеграции
-
-    sdkCtx.EventManager().EmitEvent(
-        sdk.NewEvent("bridge_execute",
-            sdk.NewAttribute("message_id", msg.MessageId),
-            sdk.NewAttribute("executor", msg.Executor.String()),
-        ),
-    )
-
-    return &types.MsgExecuteResponse{Status: "done"}, nil
+	return &types.MsgExecuteResponse{Status: types.StatusExecuted}, nil
 }
