@@ -24,22 +24,15 @@ func TestKeyDerivationIsDeterministicAndDistinct(t *testing.T) {
 	}
 }
 
+// Инварианты для Status (единый статус сообщений).
 func TestStatusOrderInvariants(t *testing.T) {
-	// Предполагаем, что порядок такой:
-	// Unknown < Pending < Verified < Executed, а Failed отдельный.
-	if !(StatusPending > StatusUnknown) {
-		t.Fatalf("expected Pending > Unknown")
-	}
-	if !(StatusVerified > StatusPending) {
-		t.Fatalf("expected Verified > Pending")
-	}
-	if !(StatusExecuted > StatusVerified) {
-		t.Fatalf("expected Executed > Verified")
-	}
-	// Failed не обязан быть больше/меньше — просто должен отличаться
-	if StatusFailed == StatusExecuted || StatusFailed == StatusVerified || StatusFailed == StatusPending {
-		t.Fatalf("StatusFailed must be distinct")
-	}
+    // перечислим ожидаемые константы по порядку — Unknown < Pending < Verified < Executed < Failed
+    if !(StatusUnknown < StatusPending &&
+         StatusPending < StatusVerified &&
+         StatusVerified < StatusExecuted &&
+         StatusExecuted < StatusFailed) {
+        t.Fatalf("status order invariants failed")
+    }
 }
 
 func TestMessageStatusOrderInvariants(t *testing.T) {
