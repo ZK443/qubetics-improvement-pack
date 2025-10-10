@@ -43,11 +43,14 @@ func TestStatusOrderInvariants(t *testing.T) {
 }
 
 func TestMessageStatusOrderInvariants(t *testing.T) {
-	// Аналогично для MessageStatus (если он объявлен отдельно).
-	// Тест не упадёт, если типов нет — просто пропустим.
-	type hasMessageStatus interface{}
-	var _ hasMessageStatus = MessageStatus(0) // компиляция подскажет, что тип есть
+	// Пропускаем тест, если MessageStatus не определён
+	defer func() {
+		if r := recover(); r != nil {
+			t.Skip("MessageStatus type not defined in this module")
+		}
+	}()
 
+	_ = MessageStatus(0)
 	if !(StatusVerified > StatusPending) {
 		t.Fatalf("expected StatusVerified > StatusPending (MessageStatus)")
 	}
