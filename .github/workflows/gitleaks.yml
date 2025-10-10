@@ -1,7 +1,7 @@
 ---
 name: Gitleaks
 
-"on":
+on:
   push:
     branches: ["main"]
   pull_request:
@@ -9,16 +9,18 @@ name: Gitleaks
 
 permissions:
   contents: read
+  security-events: write
 
 jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
         with:
-          args: --verbose --redact
+          fetch-depth: 0        # важно: полная история для диапазона PR
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # обязателен для PR
