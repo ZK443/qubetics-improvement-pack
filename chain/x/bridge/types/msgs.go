@@ -1,35 +1,29 @@
-// SPDX-License-Identifier: MIT
 package types
 
-const (
-	ActionSend    = "bridge_send"
-	ActionVerify  = "bridge_verify"
-	ActionExecute = "bridge_execute"
+import (
+    sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-type Msg interface{ Type() string }
-
-// MsgSend — заявка на межсетевой перенос/вызов.
-type MsgSend struct {
-	ID      string
-	Nonce   uint64
-	Source  ChainID
-	Dest    ChainID
-	Route   Route
-	Payload []byte
-	Sender  []byte
+type MsgVerifyProof struct {
+    Signer        sdk.AccAddress
+    ProofId       string
+    ProofData     []byte
+    MessageID     string
+    ExpectedDigest []byte
+    Verifier      string
 }
-func (m MsgSend) Type() string { return ActionSend }
 
-// MsgVerify — доказательство для ранее созданного сообщения.
-type MsgVerify struct {
-	MsgID string
-	Proof Proof
+type MsgVerifyProofResponse struct {
+    Status string
 }
-func (m MsgVerify) Type() string { return ActionVerify }
 
-// MsgExecute — попытка выполнить ранее верифицированное сообщение.
 type MsgExecute struct {
-	MsgID string
+    Executor  sdk.AccAddress
+    MessageId string
+    ProofId   string
+    Amount    sdk.Int // для rate-limit примера
 }
-func (m MsgExecute) Type() string { return ActionExecute }
+
+type MsgExecuteResponse struct {
+    Status string
+}
