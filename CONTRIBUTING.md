@@ -1,16 +1,11 @@
-## Conventional Commits (required)
+## Conventional Commits
 
-Используются префиксы:
-- `feat(bridge): …` для новых возможностей модуля моста
-- `fix(bridge): …` для исправлений
-- `test(bridge): …` для тестов
-- `docs(bridge): …` для документации
-- `ci: …` для изменений в пайплайнах
+Используются префиксы: `feat|fix|test|docs|ci` и область (`bridge|infra|security`).
+Пример: `feat(bridge): add new cross-chain handler`.
 
 ## PR Checklist
 
-- [ ] Описан тип изменения (`feat|fix|test|docs|ci`) и область (`bridge|security|infra`)
-- [ ] Добавлены/обновлены тесты (если применимо)
-- [ ] Документация обновлена (если применимо)
-- [ ] CI проходит (все обязательные checks)
-- [ ] Безопасность: нет секретов, логи не содержат приватных данных
+- [ ] Тесты и документация обновлены
+- [ ] Проверен CI и security-скан
+- [ ] Нет секретов или токенов в коде
+- [ ] Подписан commit (`git commit -S`)
