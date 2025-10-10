@@ -1,6 +1,16 @@
-# Contributing
+## Conventional Commits (required)
 
-- Use Conventional Commits.
-- All PRs require review by CODEOWNERS.
-- Run: `go test ./...` and `golangci-lint run` before submitting.
-- Security-sensitive changes must include threat model notes.
+Используются префиксы:
+- `feat(bridge): …` для новых возможностей модуля моста
+- `fix(bridge): …` для исправлений
+- `test(bridge): …` для тестов
+- `docs(bridge): …` для документации
+- `ci: …` для изменений в пайплайнах
+
+## PR Checklist
+
+- [ ] Описан тип изменения (`feat|fix|test|docs|ci`) и область (`bridge|security|infra`)
+- [ ] Добавлены/обновлены тесты (если применимо)
+- [ ] Документация обновлена (если применимо)
+- [ ] CI проходит (все обязательные checks)
+- [ ] Безопасность: нет секретов, логи не содержат приватных данных
