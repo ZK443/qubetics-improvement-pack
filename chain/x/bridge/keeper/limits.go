@@ -6,7 +6,7 @@ import (
 )
 
 var (
-    DefaultMaxPerAccount = sdk.NewInt(10_000_000_000) // Example: 10 QUBT max per hour
+    DefaultMaxPerAccount = sdk.NewInt(10_000_000_000) // пример: 10 QUBT за час
     DefaultCooldown      = time.Hour
 )
 
@@ -16,16 +16,14 @@ func (k Keeper) CheckRateLimit(ctx sdk.Context, account sdk.AccAddress, amount s
 
     bz := store.Get(key)
     if bz != nil {
-        lastTime := sdk.BigEndianToUint64(bz)
-        if ctx.BlockTime().Sub(time.Unix(int64(lastTime), 0)) < DefaultCooldown {
+        last := sdk.BigEndianToUint64(bz)
+        if ctx.BlockTime().Sub(time.Unix(int64(last), 0)) < DefaultCooldown {
             return false
         }
     }
-
     if amount.GT(DefaultMaxPerAccount) {
         return false
     }
-
     store.Set(key, sdk.Uint64ToBigEndian(uint64(ctx.BlockTime().Unix())))
     return true
 }
