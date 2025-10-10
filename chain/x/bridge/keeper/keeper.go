@@ -1,31 +1,30 @@
 package keeper
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
-	"github.com/ZK443/qubetics-improvement-pack/chain/x/bridge/types"
-	
+    "github.com/cosmos/cosmos-sdk/store/prefix"
+    storetypes "github.com/cosmos/cosmos-sdk/store/types"
+    sdk "github.com/cosmos/cosmos-sdk/types"
+    "github.com/ZK443/qubetics-improvement-pack/chain/x/bridge/types"
 )
 
 type Keeper struct {
-	bank     types.BankKeeper // interface to send coins if needed
-	storeKey sdk.StoreKey
+    storeKey       storetypes.StoreKey
+    bindingVerifier types.BindingVerifier
 }
 
-func NewKeeper(storeKey sdk.StoreKey, bank types.BankKeeper) Keeper {
-	return Keeper{storeKey: storeKey, bank: bank}
+func NewKeeper(key storetypes.StoreKey, bv types.BindingVerifier) Keeper {
+    return Keeper{
+        storeKey:       key,
+        bindingVerifier: bv,
+    }
 }
 
-// VerifyProof must be pure: no state mutation on verification only.
-func (k Keeper) VerifyProof(ctx sdk.Context, msg types.Message, proof types.Proof) types.VerificationResult {
-	// TODO: call registered client(s) to verify proof (light/zk).
-	// MUST NOT execute state changes here.
-	return types.VerificationResult{Valid: false, Reason: "not implemented"}
-}
+// Helpers
+func (k Keeper) proofKey(id string) []byte { return []byte(types.KeyPrefixProof + id) }
+func (k Keeper) execKey(id string)  []byte { return []byte(types.KeyPrefixExec + id) }
 
-// Execute applies the effect of a previously verified message.
-// MUST be idempotent and check replay by msg.ID/Nonce.
-func (k Keeper) Execute(ctx sdk.Context, msg types.Message) error {
-	// TODO: idempotency check, route dispatch, replay protection.
-	return nil
+func (k Keeper) IsRelayer(ctx sdk.Context, addr sdk.AccAddress) bool {
+    // Упростим: любой не-пустой адрес считаем валидным для PoC, в реале — роли/ACL.
+    if addr == nil || addr.Empty() { return false }
+    return true
 }
