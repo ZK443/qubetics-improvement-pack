@@ -43,7 +43,7 @@ func (k Keeper) GetParams(ctx sdk.Context) types.Params {
 
 func (k Keeper) SetParams(ctx sdk.Context, p types.Params) error {
 	if err := p.Validate(); err != nil {
-		return err
+		return erк
 	}
 	bz, _ := json.Marshal(p)
 	k.kv(ctx).Set(store.KeyParams, bz)

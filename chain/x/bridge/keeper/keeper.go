@@ -23,18 +23,16 @@ func NewKeeper() *Keeper {
 	}
 }
 
-func (k *Keeper) isPaused() bool                               { return k.paused || k.params.GlobalPause }
-func (k *Keeper) getStatusByID(id string) types.Status         { return k.status[id] }
-func (k *Keeper) isExecuted(id string) bool                    { return k.executed[id] }
-func (k *Keeper) rateLimited(_ types.MsgExecute) (bool, string) { // подробная логика — в S4
-	return false, ""
-}
-func (k *Keeper) markExecuted(id string)                  { k.executed[id] = true }
-func (k *Keeper) emitEvent(_ string, _ map[string]string) {}
+func (k *Keeper) isPaused() bool                                { return k.paused || k.params.GlobalPause }
+func (k *Keeper) getStatusByID(id string) types.Status          { return k.status[id] }
+func (k *Keeper) isExecuted(id string) bool                     { return k.executed[id] }
+func (k *Keeper) rateLimited(_ types.MsgExecute) (bool, string) { return false, "" }
+func (k *Keeper) markExecuted(id string)                        { k.executed[id] = true }
+func (k *Keeper) emitEvent(_ string, _ map[string]string)       {}
 
 // ---- Params ----
 func (k *Keeper) GetParams() types.Params        { return k.params }
-func (k *Keeper) SetParams(p types.Params) error { // валидация — из types.Params
+func (k *Keeper) SetParams(p types.Params) error {
 	if err := p.Validate(); err != nil {
 		return err
 	}
