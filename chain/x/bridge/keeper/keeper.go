@@ -2,7 +2,11 @@
 
 package keeper
 
-import "github.com/ZK443/qubetics-improvement-pack/chain/x/bridge/types"
+import (
+	"time"
+
+	"github.com/ZK443/qubetics-improvement-pack/chain/x/bridge/types"
+)
 
 // Лёгкий in-memory Keeper для прототипа и CI (без Cosmos SDK).
 type Keeper struct {
@@ -10,6 +14,13 @@ type Keeper struct {
 	executed map[string]bool
 	status   map[string]types.Status
 	nonce    map[string]uint64
+
+	// rate-limit (окна по маршруту)
+	rlCount map[types.Route]uint64 // сколько выполнений в текущем окне
+	rlUntil map[types.Route]int64  // unix ms — когда заканчивается окно
+
+	// источник времени (подменяется в тестах)
+	now func() int64
 
 	params types.Params
 	acl    map[string]bool // "адрес" -> разрешён
@@ -20,18 +31,44 @@ func NewKeeper() *Keeper {
 		executed: make(map[string]bool),
 		status:   make(map[string]types.Status),
 		nonce:    make(map[string]uint64),
-		params:   types.DefaultParams(),
-		acl:      map[string]bool{},
+
+		rlCount: map[types.Route]uint64{},
+		rlUntil: map[types.Route]int64{},
+		now:     func() int64 { return time.Now().UnixMilli() },
+
+		params: types.DefaultParams(),
+		acl:    map[string]bool{},
 	}
 }
 
 // ---- базовые методы ----
-func (k *Keeper) isPaused() bool                                { return k.paused || k.params.GlobalPause }
-func (k *Keeper) getStatusByID(id string) types.Status          { return k.status[id] }
-func (k *Keeper) isExecuted(id string) bool                     { return k.executed[id] }
-func (k *Keeper) rateLimited(_ types.MsgExecute) (bool, string) { return false, "" }
-func (k *Keeper) markExecuted(id string)                        { k.executed[id] = true }
-func (k *Keeper) emitEvent(_ string, _ map[string]string)       {}
+func (k *Keeper) isPaused() bool                          { return k.paused || k.params.GlobalPause }
+func (k *Keeper) getStatusByID(id string) types.Status    { return k.status[id] }
+func (k *Keeper) isExecuted(id string) bool               { return k.executed[id] }
+func (k *Keeper) markExecuted(id string)                  { k.executed[id] = true }
+func (k *Keeper) emitEvent(_ string, _ map[string]string) {}
+
+// Минимальная реализация rate-limit поверх Params.
+// Считает количество выполнений по маршруту в скользящем окне.
+func (k *Keeper) rateLimited(msg types.MsgExecute) (bool, string) {
+	// Защита от "выключенного" лимита.
+	if k.params.RateLimitAmount == 0 || k.params.RateLimitWindowMs == 0 {
+		return false, ""
+	}
+
+	now := k.now()
+	until := k.rlUntil[msg.Route]
+	// Если окно истекло — открыть новое.
+	if now > until {
+		k.rlUntil[msg.Route] = now + int64(k.params.RateLimitWindowMs)
+		k.rlCount[msg.Route] = 0
+	}
+	if k.rlCount[msg.Route] >= k.params.RateLimitAmount {
+		return true, "window"
+	}
+	k.rlCount[msg.Route]++
+	return false, ""
+}
 
 // ---- Params ----
 func (k *Keeper) GetParams() types.Params { return k.params }
@@ -97,6 +134,6 @@ func (k *Keeper) CanExecute(id string) bool {
 
 // Зафиксировать успешное выполнение с обновлением статуса и флагов.
 func (k *Keeper) MarkExecuted(id string) {
-	k.markExecuted(id)               // внутренний быстрый флаг
+	k.markExecuted(id) // внутренний быстрый флаг
 	k.SetStatus(id, types.StatusExecuted)
 }
