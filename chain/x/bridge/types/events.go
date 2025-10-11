@@ -1,12 +1,18 @@
 package types
 
-const (
-	EventSend    = "bridge_send"
-	EventVerify  = "bridge_verify"
-	EventExecute = "bridge_execute"
+// Имя события и произвольные атрибуты (строковые для упрощения).
+type Event struct {
+	Name  string
+	Attrs map[string]string
+}
 
-	AttrMsgID = "msg_id"
-	AttrRoute = "route"
-	AttrSrc   = "source"
-	AttrDst   = "dest"
+// Имена событий модуля bridge.
+// Держите их стабильными (используются в тестах/дашбордах).
+const (
+	EventExecuteOK      = "bridge.execute.ok"
+	EventExecuteDenied  = "bridge.execute.denied"
+	EventExecuteReplay  = "bridge.execute.replay"
+	EventRateLimitHit   = "bridge.ratelimit.hit"
+	EventPausedBlock    = "bridge.paused"
+	EventUnsupported    = "bridge.route.unsupported"
 )
