@@ -9,6 +9,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
+
 
 	bridgemodule "github.com/ZK443/qubetics-improvement-pack/chain/x/bridge"
 	bridgekeeper "github.com/ZK443/qubetics-improvement-pack/chain/x/bridge/keeper"
@@ -41,7 +43,7 @@ func NewQubeticsApp() *QubeticsApp {
 	app := &QubeticsApp{
 		BaseApp:      bApp,
 		keys:         kvKeys,
-		BridgeKeeper: bridgekeeper.NewKeeper(bridgeKey, noopBankKeeper{}),
+		BridgeKeeper: bridgekeeper.NewKeeper(nil, bridgeKey, paramtypes.Subspace{}),
 	}
 
 	app.SetInitChainer(app.InitChainer)
