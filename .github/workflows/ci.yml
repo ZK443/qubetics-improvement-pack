@@ -3,7 +3,7 @@ name: CI
 
 "on":
   push:
-    branches: ["main"]
+    branches: ["main", "triada/**"]
   pull_request:
     branches: ["main"]
 
@@ -16,7 +16,37 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
+          # Оставлено 1.23.x для совместимости с текущим кодом;
+          # при необходимости опустить до 1.21.x на S2.
           go-version: "1.23.x"
+          cache: true
+
+      - name: Show Go env
+        run: |
+          go version
+          go env
+
+      # === S1 additions ===
+      - name: Go build (root)
+        run: |
+          # Если используется go.work — сборка из корня увидит все пакеты.
+          # Если нет go.work — временно ограничить подмодулем.
+          set -e
+          if [ -f go.work ]; then
+            go build ./... 2>&1 | tee build.log
+          else
+            cd chain/x/bridge
+            go build ./... 2>&1 | tee ../../build.log
+          fi
+
+      - name: Go vet
+        run: |
+          if [ -f go.work ]; then
+            go vet ./...
+          else
+            cd chain/x/bridge
+            go vet ./...
+          fi
 
       - name: Go tests
         run: |
@@ -46,12 +76,20 @@ jobs:
               truthy:
                 level: warning
 
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+
   sbom:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install Syft
         run: |
+          # Примечание: скачивание без checksum допустимо до S7; далее заменить на pinned SHA/релиз.
           curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
       - name: Generate SBOM (SPDX JSON)
         run: syft dir:. -o spdx-json > sbom.spdx.json
