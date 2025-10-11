@@ -22,12 +22,26 @@ type Keeper struct {
 	// источник времени (подменяется в тестах)
 	now func() int64
 
+	// события (ring-buffer)
+	events []types.Event
+	evCap  int // ёмкость буфера
+
+	// базовая статистика
+	stats struct {
+		Executed    uint64
+		Denied      uint64
+		Replayed    uint64
+		RateLimit   uint64
+		Paused      uint64
+		Unsupported uint64
+	}
+
 	params types.Params
 	acl    map[string]bool // "адрес" -> разрешён
 }
 
 func NewKeeper() *Keeper {
-	return &Keeper{
+	k := &Keeper{
 		executed: make(map[string]bool),
 		status:   make(map[string]types.Status),
 		nonce:    make(map[string]uint64),
@@ -36,17 +50,67 @@ func NewKeeper() *Keeper {
 		rlUntil: map[types.Route]int64{},
 		now:     func() int64 { return time.Now().UnixMilli() },
 
+		events: make([]types.Event, 0, 256),
+		evCap:  256,
+
 		params: types.DefaultParams(),
 		acl:    map[string]bool{},
 	}
+	return k
 }
 
 // ---- базовые методы ----
-func (k *Keeper) isPaused() bool                          { return k.paused || k.params.GlobalPause }
-func (k *Keeper) getStatusByID(id string) types.Status    { return k.status[id] }
-func (k *Keeper) isExecuted(id string) bool               { return k.executed[id] }
-func (k *Keeper) markExecuted(id string)                  { k.executed[id] = true }
-func (k *Keeper) emitEvent(_ string, _ map[string]string) {}
+func (k *Keeper) isPaused() bool                       { return k.paused || k.params.GlobalPause }
+func (k *Keeper) getStatusByID(id string) types.Status { return k.status[id] }
+func (k *Keeper) isExecuted(id string) bool            { return k.executed[id] }
+func (k *Keeper) markExecuted(id string)               { k.executed[id] = true }
+
+// emitEvent: добавляет событие в ring-buffer и обновляет счётчики.
+func (k *Keeper) emitEvent(name string, attrs map[string]string) {
+	ev := types.Event{Name: name, Attrs: attrs}
+	// вытеснение по FIFO при заполнении
+	if len(k.events) == k.evCap {
+		copy(k.events[0:], k.events[1:])
+		k.events[len(k.events)-1] = ev
+	} else {
+		k.events = append(k.events, ev)
+	}
+
+	// простая статистика по типу события
+	switch name {
+	case types.EventExecuteOK:
+		k.stats.Executed++
+	case types.EventExecuteDenied:
+		k.stats.Denied++
+	case types.EventExecuteReplay:
+		k.stats.Replayed++
+	case types.EventRateLimitHit:
+		k.stats.RateLimit++
+	case types.EventPausedBlock:
+		k.stats.Paused++
+	case types.EventUnsupported:
+		k.stats.Unsupported++
+	}
+}
+
+// Доступ к событиям/статистике (для тестов/репортов).
+func (k *Keeper) Events() []types.Event { return append([]types.Event(nil), k.events...) }
+func (k *Keeper) ClearEvents()          { k.events = k.events[:0] }
+
+type Stats struct {
+	Executed, Denied, Replayed, RateLimit, Paused, Unsupported uint64
+}
+
+func (k *Keeper) GetStats() Stats {
+	return Stats{
+		Executed:    k.stats.Executed,
+		Denied:      k.stats.Denied,
+		Replayed:    k.stats.Replayed,
+		RateLimit:   k.stats.RateLimit,
+		Paused:      k.stats.Paused,
+		Unsupported: k.stats.Unsupported,
+	}
+}
 
 // Минимальная реализация rate-limit поверх Params.
 // Считает количество выполнений по маршруту в скользящем окне.
@@ -102,14 +166,10 @@ func (k *Keeper) GetStatus(id string) types.Status {
 	return types.StatusUnknown
 }
 
-func (k *Keeper) SetStatus(id string, st types.Status) {
-	k.status[id] = st
-}
+func (k *Keeper) SetStatus(id string, st types.Status) { k.status[id] = st }
 
 // ---- Nonce per-sender ----
-func (k *Keeper) PeekNonce(sender string) uint64 {
-	return k.nonce[sender]
-}
+func (k *Keeper) PeekNonce(sender string) uint64 { return k.nonce[sender] }
 
 func (k *Keeper) NextNonce(sender string) uint64 {
 	n := k.nonce[sender] + 1
@@ -118,7 +178,6 @@ func (k *Keeper) NextNonce(sender string) uint64 {
 }
 
 // ---- Invariants / Guards ----
-// Можно выполнять, если: нет глобальной паузы, статус == Verified, не выполнено ранее.
 func (k *Keeper) CanExecute(id string) bool {
 	if k.isPaused() {
 		return false
@@ -132,7 +191,6 @@ func (k *Keeper) CanExecute(id string) bool {
 	return true
 }
 
-// Зафиксировать успешное выполнение с обновлением статуса и флагов.
 func (k *Keeper) MarkExecuted(id string) {
 	k.markExecuted(id) // внутренний быстрый флаг
 	k.SetStatus(id, types.StatusExecuted)
