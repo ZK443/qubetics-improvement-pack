@@ -11,6 +11,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
 	bridgemodule "github.com/ZK443/qubetics-improvement-pack/chain/x/bridge"
 	bridgekeeper "github.com/ZK443/qubetics-improvement-pack/chain/x/bridge/keeper"
@@ -42,21 +43,20 @@ func NewQubeticsApp() *QubeticsApp {
 		panic(err)
 	}
 
-	// --- Keeper модуля bridge ---
-	bridgeKeeper := bridgekeeper.NewKeeper(bridgeKey, noopBankKeeper{})
+	// --- Keeper модуля bridge (cosmos-сигнатура: cdc, storeKey, params-subspace) ---
+	bridgeKeeper := bridgekeeper.NewKeeper(nil, bridgeKey, paramtypes.Subspace{})
 
-	// --- Менеджер модулей ---
-	cdc := codec.NewLegacyAmino()
+	// --- Менеджер модулей (подключаем bridge) ---
 	mm := module.NewManager(
 		bridgemodule.NewAppModule(bridgeKeeper),
 	)
 
-	// --- Привязка модулей к жизненному циклу приложения ---
+	// --- порядок вызова жизненного цикла ---
 	mm.SetOrderInitGenesis(bridgetypes.ModuleName)
 	mm.SetOrderBeginBlockers(bridgetypes.ModuleName)
 	mm.SetOrderEndBlockers(bridgetypes.ModuleName)
 
-	app := &QubeticsApp{
+	app := &QubeticsApp {
 		BaseApp:      bApp,
 		keys:         kvKeys,
 		BridgeKeeper: bridgeKeeper,
