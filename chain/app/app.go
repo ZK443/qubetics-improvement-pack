@@ -8,6 +8,7 @@ import (
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -18,7 +19,6 @@ import (
 	bridgetypes "github.com/ZK443/qubetics-improvement-pack/chain/x/bridge/types"
 )
 
-// QubeticsApp — минимальное Cosmos-приложение с интегрированным модулем bridge.
 type QubeticsApp struct {
 	*baseapp.BaseApp
 	BridgeKeeper bridgekeeper.Keeper
@@ -32,7 +32,7 @@ func NewQubeticsApp() *QubeticsApp {
 
 	bApp := baseapp.NewBaseApp("qubetics", logger, db, noopTxDecoder)
 
-	// --- хранилище ---
+	// stores
 	bridgeKey := storetypes.NewKVStoreKey(bridgetypes.ModuleName)
 	kvKeys := map[string]*storetypes.KVStoreKey{
 		bridgetypes.ModuleName: bridgeKey,
@@ -43,20 +43,24 @@ func NewQubeticsApp() *QubeticsApp {
 		panic(err)
 	}
 
-	// --- Keeper модуля bridge (cosmos-сигнатура: cdc, storeKey, params-subspace) ---
+	// keepers
 	bridgeKeeper := bridgekeeper.NewKeeper(nil, bridgeKey, paramtypes.Subspace{})
 
-	// --- Менеджер модулей (подключаем bridge) ---
+	// module manager
 	mm := module.NewManager(
 		bridgemodule.NewAppModule(bridgeKeeper),
 	)
 
-	// --- порядок вызова жизненного цикла ---
+	// order
 	mm.SetOrderInitGenesis(bridgetypes.ModuleName)
 	mm.SetOrderBeginBlockers(bridgetypes.ModuleName)
 	mm.SetOrderEndBlockers(bridgetypes.ModuleName)
 
-	app := &QubeticsApp {
+	// register gRPC services (MsgServer/Query) via Configurator
+	conf := module.NewConfigurator(appCodec(), bApp.MsgServiceRouter(), bApp.GRPCQueryRouter())
+	mm.RegisterServices(conf)
+
+	app := &QubeticsApp{
 		BaseApp:      bApp,
 		keys:         kvKeys,
 		BridgeKeeper: bridgeKeeper,
@@ -69,8 +73,6 @@ func NewQubeticsApp() *QubeticsApp {
 
 	return app
 }
-
-// --- стандартные ABCI хуки ---
 
 func (app *QubeticsApp) BeginBlocker(ctx sdk.Context, _ abci.RequestBeginBlock) abci.ResponseBeginBlock {
 	app.mm.BeginBlock(ctx)
@@ -87,10 +89,14 @@ func (app *QubeticsApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) 
 	return abci.ResponseInitChain{}
 }
 
-// --- утилиты ---
-
+// minimal codec (interface registry without registrations is sufficient for genesis JSON here)
 func (app *QubeticsApp) appCodec() codec.Codec {
-	return codec.NewProtoCodec(nil)
+	return appCodec()
+}
+
+func appCodec() codec.Codec {
+	ir := codectypes.NewInterfaceRegistry()
+	return codec.NewProtoCodec(ir)
 }
 
 func noopTxDecoder(_ []byte) (sdk.Tx, error) {
@@ -100,7 +106,5 @@ func noopTxDecoder(_ []byte) (sdk.Tx, error) {
 type noopBankKeeper struct{}
 
 func (noopBankKeeper) SendCoinsFromModuleToAccount(
-	ctx sdk.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins,
-) error {
-	return nil
-}
+	_ sdk.Context, _ string, _ sdk.AccAddress, _ sdk.Coins,
+) error { return nil }
