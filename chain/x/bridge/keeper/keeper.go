@@ -31,9 +31,10 @@ func NewKeeper() *Keeper {
 		executed: make(map[string]bool),
 		status:   make(map[string]types.Status),
 		nonce:    make(map[string]uint64),
-		rlCount:  map[types.Route]uint64{},
-		rlUntil:  map[types.Route]int64{},
-		now:      func() int64 { return time.Now().UnixMilli() },
+
+		rlCount: map[types.Route]uint64{},
+		rlUntil: map[types.Route]int64{},
+		now:     func() int64 { return time.Now().UnixMilli() },
 
 		params: types.DefaultParams(),
 		acl:    map[string]bool{},
@@ -41,23 +42,23 @@ func NewKeeper() *Keeper {
 }
 
 // ---- базовые методы ----
-func (k *Keeper) isPaused() bool                                { return k.paused || k.params.GlobalPause }
-func (k *Keeper) getStatusByID(id string) types.Status          { return k.status[id] }
-func (k *Keeper) isExecuted(id string) bool                     { return k.executed[id] }
-func (k *Keeper) markExecuted(id string)                        { k.executed[id] = true }
-func (k *Keeper) emitEvent(_ string, _ map[string]string)       {}
+func (k *Keeper) isPaused() bool                          { return k.paused || k.params.GlobalPause }
+func (k *Keeper) getStatusByID(id string) types.Status    { return k.status[id] }
+func (k *Keeper) isExecuted(id string) bool               { return k.executed[id] }
+func (k *Keeper) markExecuted(id string)                  { k.executed[id] = true }
+func (k *Keeper) emitEvent(_ string, _ map[string]string) {}
 
 // Минимальная реализация rate-limit поверх Params.
 // Считает количество выполнений по маршруту в скользящем окне.
 func (k *Keeper) rateLimited(msg types.MsgExecute) (bool, string) {
-	// Защита от "выключенного" лимита (на всякий случай).
+	// Защита от "выключенного" лимита.
 	if k.params.RateLimitAmount == 0 || k.params.RateLimitWindowMs == 0 {
 		return false, ""
 	}
 
 	now := k.now()
 	until := k.rlUntil[msg.Route]
-	// Если окно истекло — открыть новое окно.
+	// Если окно истекло — открыть новое.
 	if now > until {
 		k.rlUntil[msg.Route] = now + int64(k.params.RateLimitWindowMs)
 		k.rlCount[msg.Route] = 0
@@ -133,6 +134,6 @@ func (k *Keeper) CanExecute(id string) bool {
 
 // Зафиксировать успешное выполнение с обновлением статуса и флагов.
 func (k *Keeper) MarkExecuted(id string) {
-	k.markExecuted(id)               // внутренний быстрый флаг
+	k.markExecuted(id) // внутренний быстрый флаг
 	k.SetStatus(id, types.StatusExecuted)
 }
