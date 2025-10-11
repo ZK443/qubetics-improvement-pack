@@ -8,7 +8,7 @@ const (
 	StatusPending               // отправлено (Send), ждём Verify
 	StatusVerified              // доказ-во принято (Verify ok)
 	StatusExecuted              // выполнено (Execute ok)
-	StatusRejected              // отклонено (rate-limit/вито/ошибка)
+	StatusRejected              // отклонено (rate-limit/вето/ошибка)
 	StatusFailed                // внутренняя ошибка выполнения
 )
 
@@ -23,36 +23,19 @@ const (
 	RouteContractCall  Route = "contract-call"
 )
 
-// Сообщение на выполнение.
-type MsgExecute struct {
-	ID     string
-	Route  Route
-	Sender string
-}
-
-// Результат выполнения.
-type MsgExecuteResponse struct {
-	Status Status
-	Reason string // текстовая причина отклонения (если есть)
-}
-
 // ---- KV-ключи (префиксы) ----
-// Преднамеренно простые, чтобы не тащить Cosmos SDK в прототип.
+// Простые строки для наглядности; Cosmos-префиксы можно добавить позже.
 var (
-	KeyPrefixMsg      = []byte("bridge/msg/")      // msgID -> raw blob
-	KeyPrefixStatus   = []byte("bridge/status/")   // msgID -> MessageStatus
-	KeyPrefixNonce    = []byte("bridge/nonce/")    // sender -> uint64
-	KeyPrefixRateLim  = []byte("bridge/rl/route/") // route -> RateLimitConfig
-	KeyPrefixPause    = []byte("bridge/kill")      // глобальная пауза (bool)
+	KeyPrefixMsg     = []byte("bridge/msg/")      // msgID -> raw blob
+	KeyPrefixStatus  = []byte("bridge/status/")   // msgID -> MessageStatus
+	KeyPrefixNonce   = []byte("bridge/nonce/")    // sender -> uint64
+	KeyPrefixRateLim = []byte("bridge/rl/route/") // route -> RateLimitConfig
+	KeyPrefixPause   = []byte("bridge/kill")      // глобальная пауза (bool)
 )
 
 // Хелперы по формированию ключей.
-func KeyMsg(id string) []byte     { return append([]byte{}, append(KeyPrefixMsg, []byte(id)...)...) }
-func KeyStatus(id string) []byte  { return append([]byte{}, append(KeyPrefixStatus, []byte(id)...)...) }
-func KeyNonce(sender string) []byte {
-	return append([]byte{}, append(KeyPrefixNonce, []byte(sender)...)...)
-}
-func KeyRateLimit(route Route) []byte {
-	return append([]byte{}, append(KeyPrefixRateLim, []byte(route)...)...)
-}
-func KeyPause() []byte { return append([]byte{}, KeyPrefixPause...) }
+func KeyMsg(id string) []byte        { return append([]byte{}, append(KeyPrefixMsg, []byte(id)...)...) }
+func KeyStatus(id string) []byte     { return append([]byte{}, append(KeyPrefixStatus, []byte(id)...)...) }
+func KeyNonce(sender string) []byte  { return append([]byte{}, append(KeyPrefixNonce, []byte(sender)...)...) }
+func KeyRateLimit(route Route) []byte { return append([]byte{}, append(KeyPrefixRateLim, []byte(route)...)...) }
+func KeyPause() []byte               { return append([]byte{}, KeyPrefixPause...) }
