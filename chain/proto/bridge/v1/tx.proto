@@ -1,0 +1,34 @@
+syntax = "proto3";
+package bridge.v1;
+
+import "bridge/v1/types.proto";
+
+option go_package = "github.com/ZK443/qubetics-improvement-pack/chain/x/bridge/types;types";
+
+service Msg {
+  rpc VerifyProof(MsgVerifyProof) returns (MsgVerifyProofResponse);
+  rpc Execute(MsgExecute) returns (MsgExecuteResponse);
+}
+
+message MsgVerifyProof {
+  string signer          = 1;     // bech32
+  Proof  proof           = 2;
+  string message_id      = 3;
+  bytes  expected_digest = 4;     // опционально
+  string verifier        = 5;     // смарт-контракт/валидатор
+}
+
+message MsgVerifyProofResponse {
+  string status = 1; // "verified"/"paused"/"invalid"
+}
+
+message MsgExecute {
+  string  executor   = 1;  // bech32
+  string  message_id = 2;
+  ExecRoute route    = 3;
+  string  amount     = 4;  // строка для sdk.Int (совместимо и не ломает сборку)
+}
+
+message MsgExecuteResponse {
+  string status = 1; // "executed"/"rejected"/"rate-limited"/"replayed"
+}

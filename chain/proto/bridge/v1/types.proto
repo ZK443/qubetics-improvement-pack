@@ -1,0 +1,16 @@
+syntax = "proto3";
+package bridge.v1;
+
+option go_package = "github.com/ZK443/qubetics-improvement-pack/chain/x/bridge/types;types";
+
+// Минимальные типы под Msg.
+message Proof {
+  string proof_id = 1;
+  bytes  data     = 2;
+}
+
+enum ExecRoute {
+  EXEC_ROUTE_UNSPECIFIED = 0;
+  EXEC_ROUTE_TOKEN_TRANSFER = 1;
+  EXEC_ROUTE_CONTRACT_CALL  = 2;
+}

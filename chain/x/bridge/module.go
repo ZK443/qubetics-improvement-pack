@@ -22,7 +22,7 @@ var _ module.AppModuleBasic = AppModuleBasic{}
 
 func (AppModuleBasic) Name() string { return types.ModuleName }
 
-// no-op: держим сигнатуру для совместимости
+// no-op: для совместимости с интерфейсом
 func (AppModuleBasic) RegisterLegacyAminoCodec(_ *codec.LegacyAmino) {}
 
 func (AppModuleBasic) DefaultGenesis(cdc module.JSONCodec) json.RawMessage {
@@ -50,8 +50,10 @@ var _ module.HasServices = AppModule{}
 
 func NewAppModule(k keeper.Keeper) AppModule { return AppModule{k: k} }
 
-// gRPC/MsgServer будет подключён на S7 (здесь — заглушка).
-func (am AppModule) RegisterServices(conf module.Configurator) { _ = conf }
+// Регистрация gRPC-сервиса MsgServer (появляется после генерации protobuf).
+func (am AppModule) RegisterServices(conf module.Configurator) {
+	types.RegisterMsgServer(conf.MsgServer(), keeper.NewCosmosMsgServer(am.k))
+}
 
 // InitGenesis — загрузка параметров и ACL через Keeper.
 func (am AppModule) InitGenesis(ctx context.Context, cdc module.JSONCodec, data json.RawMessage) {
@@ -59,11 +61,10 @@ func (am AppModule) InitGenesis(ctx context.Context, cdc module.JSONCodec, data 
 	if len(data) == 0 {
 		gs = *types.DefaultGenesis()
 	} else {
-		// игнорируем ошибку: на этапе ValidateGenesis она уже проверялась
-		_ = cdc.UnmarshalJSON(data, &gs)
+		_ = cdc.UnmarshalJSON(data, &gs) // ValidateGenesis отработала раньше
 	}
 	if err := gs.Validate(); err != nil {
-		// при ошибке — не падаем в skeleton-режиме
+		// skeleton-режим: не паникует
 		return
 	}
 
