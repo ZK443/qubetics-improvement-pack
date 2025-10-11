@@ -19,6 +19,7 @@ import (
 	bridgetypes "github.com/ZK443/qubetics-improvement-pack/chain/x/bridge/types"
 )
 
+// QubeticsApp — минимальное Cosmos-приложение с интегрированным модулем bridge.
 type QubeticsApp struct {
 	*baseapp.BaseApp
 	BridgeKeeper bridgekeeper.Keeper
@@ -73,6 +74,8 @@ func NewQubeticsApp() *QubeticsApp {
 
 	return app
 }
+
+// --- стандартные ABCI хуки ---
 
 func (app *QubeticsApp) BeginBlocker(ctx sdk.Context, _ abci.RequestBeginBlock) abci.ResponseBeginBlock {
 	app.mm.BeginBlock(ctx)
