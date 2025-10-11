@@ -12,6 +12,7 @@ import (
 
 	"github.com/ZK443/qubetics-improvement-pack/chain/x/bridge/keeper"
 	"github.com/ZK443/qubetics-improvement-pack/chain/x/bridge/types"
+	"github.com/ZK443/qubetics-improvement-pack/chain/x/bridge/types"
 )
 
 // ---------- AppModuleBasic ----------
@@ -23,6 +24,11 @@ var _ module.AppModuleBasic = AppModuleBasic{}
 func (AppModuleBasic) Name() string { return types.ModuleName }
 
 // no-op: для совместимости с интерфейсом
+func (am AppModule) RegisterServices(conf module.Configurator) {
+	types.RegisterMsgServer(conf.MsgServer(), keeper.NewCosmosMsgServer(am.k))
+	types.RegisterQueryServer(conf.QueryServer(), keeper.NewQueryServer(am.k))
+}
+
 func (AppModuleBasic) RegisterLegacyAminoCodec(_ *codec.LegacyAmino) {}
 
 func (AppModuleBasic) DefaultGenesis(cdc module.JSONCodec) json.RawMessage {
