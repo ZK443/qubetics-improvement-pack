@@ -36,7 +36,6 @@ func (k Keeper) GetParams(ctx sdk.Context) types.Params {
 	}
 	var p types.Params
 	if err := json.Unmarshal(bz, &p); err != nil {
-		// при повреждённых данных — безопасный дефолт
 		return types.DefaultParams()
 	}
 	return p
@@ -67,7 +66,8 @@ func (k Keeper) SetAllowed(ctx sdk.Context, addr string, allowed bool) {
 
 // ---- Status CRUD ----
 func (k Keeper) GetStatus(ctx sdk.Context, id string) types.Status {
-	bz := k.kv(ctx).Get(append([]byte("bridge/status/"), []byte(id)...))
+	key := append([]byte("bridge/status/"), []byte(id)...)
+	bz := k.kv(ctx).Get(key)
 	if len(bz) != 1 {
 		return types.StatusUnknown
 	}
@@ -75,24 +75,78 @@ func (k Keeper) GetStatus(ctx sdk.Context, id string) types.Status {
 }
 
 func (k Keeper) SetStatus(ctx sdk.Context, id string, st types.Status) {
-	k.kv(ctx).Set(append([]byte("bridge/status/"), []byte(id)...), []byte{byte(st)})
+	key := append([]byte("bridge/status/"), []byte(id)...)
+	k.kv(ctx).Set(key, []byte{byte(st)})
 }
 
 // ---- Nonce per-sender ----
 func (k Keeper) PeekNonce(ctx sdk.Context, sender string) uint64 {
-	bz := k.kv(ctx).Get(append([]byte("bridge/nonce/"), []byte(sender)...))
+	key := append([]byte("bridge/nonce/"), []byte(sender)...)
+	bz := k.kv(ctx).Get(key)
 	if len(bz) != 8 {
 		return 0
 	}
 	return binary.BigEndian.Uint64(bz)
 }
-
 func (k Keeper) NextNonce(ctx sdk.Context, sender string) uint64 {
+	key := append([]byte("bridge/nonce/"), []byte(sender)...)
 	cur := k.PeekNonce(ctx, sender) + 1
 	var out [8]byte
 	binary.BigEndian.PutUint64(out[:], cur)
-	k.kv(ctx).Set(append([]byte("bridge/nonce/"), []byte(sender)...), out[:])
+	k.kv(ctx).Set(key, out[:])
 	return cur
+}
+
+// ---- Rate-limit (окна по маршруту) ----
+// Логика идентична in-memory варианту, но хранится в KV:
+// count: bridge/rl/count/<route>  (uint64)
+// until: bridge/rl/until/<route>  (int64, unix ms)
+func (k Keeper) rateLimited(ctx sdk.Context, msg types.MsgExecute) (bool, string) {
+	p := k.GetParams(ctx)
+	if p.RateLimitAmount == 0 || p.RateLimitWindowMs == 0 {
+		return false, ""
+	}
+
+	route := string(msg.Route)
+	now := ctx.BlockTime().UnixMilli()
+
+	// load until
+	kUntil := store.KeyRLUntil(route)
+	untilBz := k.kv(ctx).Get(kUntil)
+	var until int64
+	if len(untilBz) == 8 {
+		until = int64(binary.BigEndian.Uint64(untilBz))
+	}
+
+	// если окно истекло — открыть новое
+	if now > until {
+		until = now + int64(p.RateLimitWindowMs)
+		var out [8]byte
+		binary.BigEndian.PutUint64(out[:], uint64(until))
+		k.kv(ctx).Set(kUntil, out[:])
+
+		// обнулить count
+		k.kv(ctx).Set(store.KeyRLCount(route), make([]byte, 8))
+	}
+
+	// load count
+	cntBz := k.kv(ctx).Get(store.KeyRLCount(route))
+	var cnt uint64
+	if len(cntBz) == 8 {
+		cnt = binary.BigEndian.Uint64(cntBz)
+	}
+
+	if cnt >= p.RateLimitAmount {
+		return true, "window"
+	}
+
+	// increment count
+	cnt++
+	var out [8]byte
+	binary.BigEndian.PutUint64(out[:], cnt)
+	k.kv(ctx).Set(store.KeyRLCount(route), out[:])
+
+	return false, ""
 }
 
 // ---- Invariants / Guards ----
@@ -114,10 +168,21 @@ func (k Keeper) MarkExecuted(ctx sdk.Context, id string) {
 	k.SetStatus(ctx, id, types.StatusExecuted)
 }
 
-// Контекстные заглушки для совместимости (реализация на следующих этапах).
+// ---- Events ----
+func (k Keeper) emitEvent(ctx sdk.Context, evt string, attrs map[string]string) {
+	ev := sdk.NewEvent(evt)
+	for kAttr, vAttr := range attrs {
+		ev = ev.AppendAttributes(sdk.NewAttribute(kAttr, vAttr))
+	}
+	ctx.EventManager().EmitEvent(ev)
+}
+
+// Контекстные заглушки (реализация будет дорабатываться на следующих этапах).
 func (k Keeper) isPaused(ctx sdk.Context) bool                                { return k.GetParams(ctx).GlobalPause }
 func (k Keeper) getStatusByID(_ sdk.Context, _ string) types.Status           { return types.StatusUnknown }
 func (k Keeper) isExecuted(_ sdk.Context, _ string) bool                      { return false }
-func (k Keeper) rateLimited(_ sdk.Context, _ types.MsgExecute) (bool, string) { return false, "" }
-func (k Keeper) markExecuted(_ sdk.Context, _ string)                          {}
-func (k Keeper) emitEvent(_ sdk.Context, _ string, _ map[string]string)        {}
+func (k Keeper) rateLimitedLegacy(_ sdk.Context, _ types.MsgExecute) (bool, string) {
+	return false, ""
+}
+func (k Keeper) markExecuted(_ sdk.Context, _ string)                   {}
+func (k Keeper) emitEventLegacy(_ sdk.Context, _ string, _ map[string]string) {}
