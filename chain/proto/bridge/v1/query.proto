@@ -1,0 +1,31 @@
+syntax = "proto3";
+package bridge.v1;
+
+option go_package = "github.com/ZK443/qubetics-improvement-pack/chain/x/bridge/types;types";
+
+service Query {
+  rpc Params(ParamsRequest)         returns (ParamsResponse);
+  rpc Status(StatusRequest)         returns (StatusResponse);
+  rpc Nonce(NonceRequest)           returns (NonceResponse);
+  rpc IsAllowed(IsAllowedRequest)   returns (IsAllowedResponse);
+}
+
+// ---- Params ----
+message ParamsRequest {}
+message ParamsResponse {
+  bool   global_pause       = 1;
+  uint64 rate_limit_amount  = 2;
+  uint64 rate_limit_window_ms = 3;
+}
+
+// ---- Status ----
+message StatusRequest  { string message_id = 1; }
+message StatusResponse { uint32 status     = 1; } // enum из Go-тайпов маппится как uint32
+
+// ---- Nonce ----
+message NonceRequest   { string sender = 1; }
+message NonceResponse  { uint64 nonce  = 1; }
+
+// ---- ACL ----
+message IsAllowedRequest  { string addr = 1; }
+message IsAllowedResponse { bool allowed = 1; }
